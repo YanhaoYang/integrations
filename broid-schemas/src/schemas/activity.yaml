@@ -28,6 +28,8 @@ properties:
         required: [ id, type ]
   object:
     oneOf:
+      - $ref: "http://schemas.broid.ai/object/action.json"
+        required: [ type, id, content ]
       - $ref: "http://schemas.broid.ai/object/note.json"
         required: [ type, id, content ]
       - $ref: "http://schemas.broid.ai/object/media.json"
