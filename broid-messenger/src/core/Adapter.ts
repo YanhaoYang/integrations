@@ -8,7 +8,7 @@ import * as R from 'ramda';
 import * as rp from 'request-promise';
 import { Observable } from 'rxjs/Rx';
 
-import { createAttachment, createButtons, parseQuickReplies } from './helpers';
+import { createAttachment, createAttachments, createButtons, parseQuickReplies } from './helpers';
 import { IAdapterOptions, IWebHookEvent } from './interfaces';
 import { Parser } from './Parser';
 import { WebHookServer } from './WebHookServer';
@@ -122,11 +122,8 @@ export class Adapter {
         const buttons = R.filter(
           (attachment: any) => attachment.type === 'Button',
           attachments);
-        const quickReplies = R.filter(
-          (button: any) => button.mediaType === 'application/vnd.geo+json',
-          buttons);
         const fButtons = createButtons(buttons);
-        const fbQuickReplies = parseQuickReplies(quickReplies);
+        const fbQuickReplies = parseQuickReplies(buttons);
         const messageData: any = {
           message: { attachment: {}, text: '' },
           recipient: { id: toID },
@@ -155,9 +152,16 @@ export class Adapter {
             messageData.message.text = R.path(['object', 'content'], data);
             delete messageData.message.attachment;
           }
+        } else if (dataType === 'Action') {
+          messageData.sender_action = R.path(['object', 'content'], data);
+          delete messageData.message;
+        } else if (dataType === 'Collection') {
+          const items: any[] = R.path(['object', 'items'], data) as any[] || [];
+          messageData.message.attachment = createAttachments(items);
         }
 
-        if (dataType === 'Note' || dataType === 'Image' || dataType === 'Video') {
+        if (dataType === 'Collection' || dataType === 'Action' || dataType === 'Note' ||
+          dataType === 'Image' || dataType === 'Video') {
           return rp({
             json: messageData,
             method: 'POST',
@@ -167,7 +171,7 @@ export class Adapter {
           .then(() => ({ type: 'sent', serviceID: this.serviceId() }));
         }
 
-        return Promise.reject(new Error('Only Note, Image, and Video are supported.'));
+        return Promise.reject(new Error('Only Collection, Action, Note, Image, and Video are supported.'));
       });
   }
 

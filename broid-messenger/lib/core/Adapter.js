@@ -88,9 +88,8 @@ class Adapter {
             const name = R.path(['object', 'name'], data) || content;
             const attachments = R.path(['object', 'attachment'], data) || [];
             const buttons = R.filter((attachment) => attachment.type === 'Button', attachments);
-            const quickReplies = R.filter((button) => button.mediaType === 'application/vnd.geo+json', buttons);
             const fButtons = helpers_1.createButtons(buttons);
-            const fbQuickReplies = helpers_1.parseQuickReplies(quickReplies);
+            const fbQuickReplies = helpers_1.parseQuickReplies(buttons);
             const messageData = {
                 message: { attachment: {}, text: '' },
                 recipient: { id: toID },
@@ -119,7 +118,16 @@ class Adapter {
                     delete messageData.message.attachment;
                 }
             }
-            if (dataType === 'Note' || dataType === 'Image' || dataType === 'Video') {
+            else if (dataType === 'Action') {
+                messageData.sender_action = R.path(['object', 'content'], data);
+                delete messageData.message;
+            }
+            else if (dataType === 'Collection') {
+                const items = R.path(['object', 'items'], data) || [];
+                messageData.message.attachment = helpers_1.createAttachments(items);
+            }
+            if (dataType === 'Collection' || dataType === 'Action' || dataType === 'Note' ||
+                dataType === 'Image' || dataType === 'Video') {
                 return rp({
                     json: messageData,
                     method: 'POST',
@@ -128,7 +136,7 @@ class Adapter {
                 })
                     .then(() => ({ type: 'sent', serviceID: this.serviceId() }));
             }
-            return Promise.reject(new Error('Only Note, Image, and Video are supported.'));
+            return Promise.reject(new Error('Only Collection, Action, Note, Image, and Video are supported.'));
         });
     }
     user(id, fields = 'first_name,last_name', cache = true) {

@@ -8,6 +8,12 @@ export function parseQuickReplies(quickReplies: any[]): any[] {
         return {
           content_type: 'location',
         };
+      } else if (button.mediaType === 'application/x-quick-reply-text') {
+          return {
+              content_type: 'text',
+              payload: button.payload,
+              title: button.title,
+          };
       }
       return null;
     },
@@ -58,6 +64,32 @@ export function createAttachment(name: string,
         subtitle: content !== name ? content : '',
         title: name || '',
       }],
+      template_type: 'generic',
+    },
+    type: 'template',
+  };
+}
+
+export function createAttachments(elements: any[]): object {
+  const attachments = R.reject(R.isNil)(R.map(
+    (el: any) => {
+      const att = {
+          buttons: [null],
+          image_url: el.url,
+          subtitle: el.content,
+          title: el.name,
+      };
+
+      const buttons = el.buttons || [];
+      if (!R.isEmpty(buttons)) {
+        att.buttons = createButtons(buttons);
+      }
+
+      return att;
+    }, elements));
+  return {
+    payload: {
+      elements: attachments,
       template_type: 'generic',
     },
     type: 'template',
